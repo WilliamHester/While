@@ -13,6 +13,18 @@ module Translator =
         | While.Mul(a1, a2) -> Arr.Aexp.Mul(xlateAexp a1, xlateAexp a2)
         | While.Sub(a1, a2) -> Arr.Aexp.Sub(xlateAexp a1, xlateAexp a2)
 
+    let rec private xlateBexp (exp : While.Bexp) : Arr.Aexp =
+        (*Values less than or equal to zero correspond to truth*)
+        match exp with
+        | While.True -> Arr.Int(0)
+        | While.False -> Arr.Int(1)
+        | While.Eq(a1, a2) -> Arr.Mul(Arr.Sub(xlateAexp a2, xlateAexp a1), Arr.Sub(xlateAexp a2, xlateAexp a1))
+        | While.Lte(a1, a2) -> Arr.Sub(xlateAexp a1, xlateAexp a2)
+        | While.Not(b1) -> Arr.Add(Arr.Int(1), Arr.Mul(Arr.Int(-1), xlateBexp b1))
+        | While.And(b1, b2) -> 
+            let a1, a2 = xlateBexp b1, xlateBexp b2
+            Arr.Mul(Arr.Int(-1), Arr.Add(Arr.Int(1), Arr.Mul(2, Arr.Mul(Arr.Sub(a2, a1), Arr.Sub(a1, a2)))))
+
     /// Translates a While program into an equivalent Arr program.
     ///
     /// A variable x in the While program is mapped to an array with
