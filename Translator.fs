@@ -1,4 +1,4 @@
-﻿namespace While2Arr
+namespace While2Arr
 
 module Translator =
 
@@ -13,19 +13,20 @@ module Translator =
         | While.Mul(a1, a2) -> Arr.Aexp.Mul(xlateAexp a1, xlateAexp a2)
         | While.Sub(a1, a2) -> Arr.Aexp.Sub(xlateAexp a1, xlateAexp a2)
 
-    let rec private xlateBexp (exp : While.Bexp) : Arr.Stm = 
-        /// true is 1, false is 0.
+    let rec private xlateBexp (exp : While.Bexp) (level : int) : Arr.Stm =
+        /// true is 1, false is 0. 
+        /// 'level' makes sure bool values aren't overriden when calling recursively
         match exp with
-        | While.True -> Arr.Assign("tempbool", Arr.Int(0), Arr.Int(1))
-        | While.False -> Arr.Assign("tempbool", Arr.Int(0), Arr.Int(0))
+        | While.True -> Arr.Assign("tempbool", Arr.Int(level), Arr.Int(1))
+        | While.False -> Arr.Assign("tempbool", Arr.Int(level), Arr.Int(0))
         | While.Lte(a1, a2) ->
             let a1, a2 = xlateAexp a1, xlateAexp a2
             Arr.Seq(
-                Arr.Assign("tempbool", Arr.Int(0), Arr.Int(0)),
-                Arr.For("tempbool", Arr.Int(2), a1, a2, 
+                Arr.Assign("tempbool", Arr.Int(level), Arr.Int(0)),
+                Arr.For("tempother", Arr.Int(0), a1, a2, 
                     Arr.Seq(
-                        Arr.Assign("tempbool", Arr.Int(0), Arr.Int(1)),
-                        Arr.Assign("tempbool", Arr.Int(2), a2)
+                        Arr.Assign("tempbool", Arr.Int(level), Arr.Int(1)),
+                        Arr.Assign("tempother", Arr.Int(0), a2)
                     )
                 )
             )
@@ -34,43 +35,43 @@ module Translator =
             Arr.Seq(
                 Arr.Seq(
                     Arr.Seq(
-                        Arr.Assign("tempbool", Arr.Int(0), Arr.Int(0)),
-                        Arr.Assign("tempbool", Arr.Int(1), Arr.Int(0))
+                        Arr.Assign("tempbool", Arr.Int(level), Arr.Int(0)),
+                        Arr.Assign("tempbool", Arr.Int(level+1), Arr.Int(0))
                     ),
                     Arr.Seq(
-                        Arr.For("tempbool", Arr.Int(2), a1, a2, 
+                        Arr.For("tempother", Arr.Int(0), a1, a2, 
                             Arr.Seq(
-                                Arr.Assign("tempbool", Arr.Int(0), Arr.Int(1)),
-                                Arr.Assign("tempbool", Arr.Int(2), a2)
+                                Arr.Assign("tempbool", Arr.Int(level), Arr.Int(1)),
+                                Arr.Assign("tempother", Arr.Int(0), a2)
                             )
                         ),
-                        Arr.For("tempbool", Arr.Int(2), a2, a1, 
+                        Arr.For("tempother", Arr.Int(0), a2, a1, 
                             Arr.Seq(
-                                Arr.Assign("tempbool", Arr.Int(1), Arr.Int(1)),
-                                Arr.Assign("tempbool", Arr.Int(2), a1)
+                                Arr.Assign("tempbool", Arr.Int(level+1), Arr.Int(1)),
+                                Arr.Assign("tempother", Arr.Int(0), a1)
                             )
                         )
                     )
                 ),
                 Arr.Seq(
-                    Arr.Assign("tempbool", Arr.Int(0), Arr.Mul(Arr.Arr("tempbool", Arr.Int(0)), Arr.Arr("tempbool", Arr.Int(1)))),
-                    Arr.Assign("tempbool", Arr.Int(1), Arr.Int(0))
+                    Arr.Assign("tempbool", Arr.Int(level), Arr.Mul(Arr.Arr("tempbool", Arr.Int(level)), Arr.Arr("tempbool", Arr.Int(level+1)))),
+                    Arr.Assign("tempbool", Arr.Int(level+1), Arr.Int(0))
                 )
             )
         | While.Not(b1) -> 
             Arr.Seq(
-                xlateBexp b1,
-                Arr.Assign("tempbool", Arr.Int(0), Arr.Sub(Arr.Int(1), Arr.Arr("tempbool", Arr.Int(0))))
+                xlateBexp b1 (level+1),
+                Arr.Assign("tempbool", Arr.Int(level), Arr.Sub(Arr.Int(1), Arr.Arr("tempbool", Arr.Int(level+1))))
             )
         | While.And(b1, b2) ->
             Arr.Seq(
                 Arr.Seq(
-                    xlateBexp b1,
-                    Arr.Assign("tempbool", Arr.Int(10), Arr.Arr("tempbool", Arr.Int(0)))
+                    xlateBexp b1 (level+1),
+                    Arr.Assign("tempbool", Arr.Int(level), Arr.Arr("tempbool", Arr.Int(level+1)))
                 ),
                 Arr.Seq(
-                    xlateBexp b2,
-                    Arr.Assign("tempbool", Arr.Int(0), Arr.Mul(Arr.Arr("tempbool", Arr.Int(0)), Arr.Arr("tempbool", Arr.Int(10))))
+                    xlateBexp b2 (level+1),
+                    Arr.Assign("tempbool", Arr.Int(level), Arr.Mul(Arr.Arr("tempbool", Arr.Int(level)), Arr.Arr("tempbool", Arr.Int(level+1))))
                 )
             )
     /// Translates a While program into an equivalent Arr program.
@@ -89,7 +90,7 @@ module Translator =
         | While.Seq(s1, s2) -> Arr.Seq(While2Arr s1, While2Arr s2)
         | While.IfElse(bexp, s1, s2) ->
             Arr.Seq(
-                xlateBexp bexp,
+                xlateBexp bexp 0,
                 Arr.Seq(
                     Arr.For("tempif", Arr.Int(0), Arr.Int(1), Arr.Arr("tempbool", Arr.Int(0)),
                         While2Arr s1
@@ -103,7 +104,7 @@ module Translator =
             Arr.Seq(
                 Arr.Seq(
                     Arr.Seq(
-                        xlateBexp bexp,
+                        xlateBexp bexp 0,
                         Arr.Seq(
                             Arr.Assign("tempcounter", Arr.Int(-1), Arr.Add(Arr.Arr("tempcounter", Arr.Int(-1)), Arr.Int(1))),
                             Arr.Assign("tempcounter", Arr.Arr("tempcounter", Arr.Int(-1)), Arr.Int(0))
@@ -114,7 +115,7 @@ module Translator =
                         Arr.Seq(
                             While2Arr body,
                             Arr.Seq(
-                                xlateBexp bexp,
+                                xlateBexp bexp 0,
                                 Arr.Assign("tempcounter", Arr.Arr("tempcounter", Arr.Int(-1)), Arr.Sub(Arr.Arr("tempcounter", Arr.Arr("tempcounter", Arr.Int(-1))), Arr.Int(1)))
                             )
                         )
