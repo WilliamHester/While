@@ -29,17 +29,32 @@ module Translator =
         | While.Seq(s1, s2) -> Arr.Seq(While2Arr s1, While2Arr s2)
         | While.IfElse(bexp, s1, s2) ->
             match bexp with
-            | While.True -> While2Arr While.Lte(While.Int(0), While.Int(0))
-            | While.False -> While2Arr While.Lte(While.Int(1), While.Int(0))
+            | While.True -> While2Arr While.IfElse(While.Lte(While.Int(0), While.Int(0)), s1, s2)
+            | While.False -> While2Arr While.IfElse(While.Lte(While.Int(1), While.Int(0)), s1, s2)
             | While.And(bexp1, bexp2) ->
                 While2Arr While.IfElse(bexp1, While.IfElse(bexp2, s1, s2), s2)
             | While.Lte(a1, a2) ->
                 Arr.Stm.For("tempbool", Arr.Int(0), 
                     xlateAexp a1, xlateAexp a2, 
-                    Arr.Seq(s1, Arr.Assign("tempbool", 0, a2))
+                    Arr.Seq(s1, Arr.Assign("tempbool", While.Int(0), a2))
                 Arr.Stm.For("tempbool", Arr.Int(0), 
                     xlateAexp While.Add(a2, While.Int(1)), xlateAexp a1, 
-                    Arr.Seq(s2, Arr.Assign("tempbool", 0, a1))
+                    Arr.Seq(s2, Arr.Assign("tempbool", While.Int(0), a1))
             | While.Eq(a1, a2) ->
                 While2Arr While.IfElse(While.And(While.Lte(a1, a2), While.Lte(a2, a1)), s1, s2)
+        | While.While(bexp, body) ->
+            match bexp with
+            | While.True -> While2Arr While.While(While.Lte(While.Int(0), While.Int(1), While.Seq(body, While.Assign("tempbool", 0))) /// oh my god, it's so ugly
+            | While.False -> While2Arr While.While(While.Lte(While.Int(1), While.Int(0)), body)
+            | While.And(bexp1, bexp2) -> /// super special unhandled case
+                While2Arr While.IfElse(bexp1, While.IfElse(bexp2, s1, s2), s2)
+            | While.Lte(a1, a2) ->
+                Arr.Stm.For("tempbool", Arr.Int(0), xlateAexp a1, xlateAexp a2, body)
+            | While.Eq(a1, a2) ->
+                While2Arr While.While(While.And(While.Lte(a1, a2), While.Lte(a2, a1)), body)
+
+
+
+
+
 
