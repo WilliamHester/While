@@ -13,7 +13,63 @@ module Translator =
         | While.Mul(a1, a2) -> Arr.Aexp.Mul(xlateAexp a1, xlateAexp a2)
         | While.Sub(a1, a2) -> Arr.Aexp.Sub(xlateAexp a1, xlateAexp a2)
 
-
+    let rec private xlateBexp (exp : While.Bexp) : Arr.Stm = 
+        /// true is 1, false is 0.
+        match exp with
+        | While.True -> Arr.Assign("tempbool", Arr.Int(0), Arr.Int(1))
+        | While.False -> Arr.Assign("tempbool", Arr.Int(0), Arr.Int(0))
+        | While.Lte(a1, a2) ->
+            let a1, a2 = xlateAexp a1, xlateAexp a2
+            Arr.Seq(
+                Arr.Assign("tempbool", Arr.Int(0), Arr.Int(0)),
+                Arr.For("tempbool", Arr.Int(1), a1, a2, 
+                    Arr.Seq(
+                        Arr.Assign("tempbool", Arr.Int(0), Arr.Int(1)),
+                        Arr.Assign("tempbool", Arr.Int(1), a2)
+                    )
+                )
+            )
+        | While.Eq(a1, a2) ->
+            let a1, a2 = xlateAexp a1, xlateAexp a2
+            Arr.Seq(
+                Arr.Seq(
+                    Arr.Seq(
+                        Arr.Assign("tempbool", Arr.Int(0), Arr.Int(0)),
+                        Arr.Assign("tempbool", Arr.Int(1), Arr.Int(0))
+                    ),
+                    Arr.Seq(
+                        Arr.For("tempbool", Arr.Int(2), a1, a2, 
+                            Arr.Seq(
+                                Arr.Assign("tempbool", Arr.Int(0), Arr.Int(1)),
+                                Arr.Assign("tempbool", Arr.Int(2), a2)
+                            )
+                        ),
+                        Arr.For("tempbool", Arr.Int(2), a2, a1, 
+                            Arr.Seq(
+                                Arr.Assign("tempbool", Arr.Int(1), Arr.Int(1)),
+                                Arr.Assign("tempbool", Arr.Int(2), a1)
+                            )
+                        )
+                    )
+                ),
+                Arr.Assign("tempbool", Arr.Int(0), Arr.Mul(Arr.Arr("tempbool", Arr.Int(0)), Arr.Arr("tempbool", Arr.Int(1))))
+            )
+        | While.Not(b1) -> 
+            Arr.Seq(
+                xlateBexp b1,
+                Arr.Assign("tempbool", Arr.Int(0), Arr.Sub(Arr.Int(1), Arr.Arr("tempbool", Arr.Int(0))))
+            )
+        | While.And(b1, b2) ->
+            Arr.Seq(
+                Arr.Seq(
+                    xlateBexp b1,
+                    Arr.Assign("tempbool", Arr.Int(10), Arr.Arr("tempbool", Arr.Int(0)))
+                ),
+                Arr.Seq(
+                    xlateBexp b2,
+                    Arr.Assign("tempbool", Arr.Int(0), Arr.Mul(Arr.Arr("tempbool", Arr.Int(0)), Arr.Arr("tempbool", Arr.Int(10))))
+                )
+            )
     /// Translates a While program into an equivalent Arr program.
     ///
     /// A variable x in the While program is mapped to an array with
