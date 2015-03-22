@@ -23,4 +23,8 @@ module Translator =
     /// In the Arr program's output, any array whose name starts with
     /// "temp" should be ignored.
     let rec While2Arr (stm : While.Stm) : Arr.Stm =
-        failwithf "NOT YET IMPLEMENTED"
+        match stm with
+        | While.Assign(variable, valueExp) -> Arr.Assign(variable, Arr.Int(0), xlateAexp valueExp)
+        | While.Skip -> Arr.Assign("tempskip", Arr.Int(0), Arr.Int(0))
+        | While.Seq(s1, s2) -> Arr.Seq(While2Arr s1, While2Arr s2)
+        | _ -> failwith "not implemented"
