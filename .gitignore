@@ -1,6 +1,7 @@
 FSharp.PowerPack.dll
 fslex.exe
 fsyacc.exe
+*.exe
 
 # https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
