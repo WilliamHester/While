@@ -32,7 +32,7 @@ module Translator =
             | While.True -> (While2Arr (While.IfElse(While.Lte(While.Int(0), While.Int(0)), s1, s2)))
             | While.False -> While2Arr (While.IfElse(While.Lte(While.Int(1), While.Int(0)), s1, s2))
             | While.And(bexp1, bexp2) ->
-                While2Arr (While.IfElse(bexp, While.IfElse(bexp2, s1, s2), s2))
+                While2Arr (While.IfElse(bexp1, While.IfElse(bexp2, s1, s2), s2))
             | While.Lte(a1, a2) ->
                 Arr.Stm.Seq(
                     Arr.Stm.For("tempbool", Arr.Int(0), xlateAexp a1, xlateAexp a2, 
