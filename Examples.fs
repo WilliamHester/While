@@ -43,7 +43,10 @@ module Examples =
         ("If[12]", [], ["result"],
             IfElse(Lte(Int(3), Int(4)), Assign("result", Int(1)), Skip));
         ("If[13]", [], ["result"],
-            IfElse(Lte(Int(3), Int(2)), Assign("result", Int(1)), Skip))
+            IfElse(Lte(Int(3), Int(2)), Assign("result", Int(1)), Skip));
+        ("If[14]", [], ["result"],
+            IfElse(And(False,And(True,True)), Assign("result", Int(1)), Skip))
+
     ]
 
     /// If i < 7, increases i by 1 until it is equal to 7
